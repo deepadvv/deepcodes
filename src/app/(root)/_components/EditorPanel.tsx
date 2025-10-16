@@ -64,21 +64,17 @@ function EditorPanel() {
     localStorage.setItem('editor-font-size', size.toString());
   };
 
-  // ✅ Fully working select all
+  // Robust select all: always directly select all text
   const handleSelectAll = () => {
     const ed = editor || (window as any).monacoEditor;
     if (!ed) {
       console.warn('[SelectAll] editor not ready yet');
       return;
     }
-
     const model = ed.getModel();
     if (!model) return;
-
     try {
-      ed.trigger('keyboard', 'editor.action.selectAll', null);
-    } catch (err) {
-      console.warn('Built-in selectAll failed, using fallback', err);
+      // Always use robust fallback
       const endLine = model.getLineCount();
       const endCol = model.getLineMaxColumn(endLine);
       ed.setSelection({
@@ -87,11 +83,13 @@ function EditorPanel() {
         endLineNumber: endLine,
         endColumn: endCol,
       });
+      ed.focus();
+    } catch (err) {
+      console.warn('SelectAll fallback failed', err);
     }
-
-    ed.focus();
   };
 
+  // Format code (unchanged)
   const handleFormatCode = async () => {
     const ed = editor || (window as any).monacoEditor;
     if (ed) {
@@ -99,6 +97,7 @@ function EditorPanel() {
     }
   };
 
+  // Word wrap toggle (unchanged handler - used in mobile only)
   const handleToggleWordWrap = () => {
     const ed = editor || (window as any).monacoEditor;
     if (ed) {
@@ -152,7 +151,6 @@ function EditorPanel() {
                 </span>
               </div>
             </div>
-
             {/* Reset Button */}
             <motion.button
               whileHover={{ scale: 1.1 }}
@@ -163,21 +161,19 @@ function EditorPanel() {
             >
               <RotateCcwIcon className="size-4 text-gray-400" />
             </motion.button>
-
             {/* Share Button */}
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => setIsShareDialogOpen(true)}
               className="inline-flex items-center gap-2 px-4 py-2 rounded-lg overflow-hidden bg-gradient-to-r
-               from-blue-500 to-blue-600 opacity-90 hover:opacity-100 transition-opacity"
+                from-blue-500 to-blue-600 opacity-90 hover:opacity-100 transition-opacity"
             >
               <ShareIcon className="size-4 text-white" />
               <span className="text-sm font-medium text-white">Share</span>
             </motion.button>
           </div>
         </div>
-
         {/* Editor */}
         <div className="relative group rounded-xl overflow-hidden ring-1 ring-white/[0.05]">
           {clerk.loaded ? (
@@ -188,12 +184,10 @@ function EditorPanel() {
               theme={theme}
               beforeMount={defineMonacoThemes}
               onMount={(editor, monaco) => {
-                // ✅ Store in both state and window
                 setEditor(editor);
                 (window as any).monacoEditor = editor;
                 console.log('[Monaco Mounted]', editor);
-
-                // === Custom Context Menu Actions ===
+                // Add Select All only
                 editor.addAction({
                   id: 'select-all',
                   label: 'Select All',
@@ -201,21 +195,14 @@ function EditorPanel() {
                   contextMenuOrder: 1.5,
                   run: () => handleSelectAll(),
                 });
-
+                // DO NOT add toggle-word-wrap
+                // Add Format only
                 editor.addAction({
                   id: 'format-document',
                   label: 'Format Document',
                   contextMenuGroupId: '1_modification',
                   contextMenuOrder: 2,
                   run: () => handleFormatCode(),
-                });
-
-                editor.addAction({
-                  id: 'toggle-word-wrap',
-                  label: 'Toggle Word Wrap',
-                  contextMenuGroupId: '2_custom',
-                  contextMenuOrder: 1,
-                  run: () => handleToggleWordWrap(),
                 });
               }}
               options={{
@@ -245,7 +232,6 @@ function EditorPanel() {
             <EditorPanelSkeleton />
           )}
         </div>
-
         {/* Input Panel */}
         <div className="mt-6">
           <label
@@ -264,7 +250,6 @@ function EditorPanel() {
           />
         </div>
       </div>
-
       {/* Mobile Toolbar */}
       {isMobile && (
         <div className="fixed bottom-4 left-4 right-4 z-50 flex justify-around bg-[#1e1e2e] p-2 rounded-xl ring-1 ring-white/10 shadow-lg">
@@ -282,7 +267,6 @@ function EditorPanel() {
           </button>
         </div>
       )}
-
       {/* Share Dialog */}
       {isShareDialogOpen && (
         <ShareSnippetDialog

@@ -251,22 +251,7 @@ function EditorPanel() {
         </div>
       </div>
       {/* Mobile Toolbar */}
-      {isMobile && (
-        <div className="fixed bottom-4 left-4 right-4 z-50 flex justify-around bg-[#1e1e2e] p-2 rounded-xl ring-1 ring-white/10 shadow-lg">
-          <button onClick={handleSelectAll} className="text-white text-sm">
-            Select All
-          </button>
-          <button onClick={handleFormatCode} className="text-white text-sm">
-            Format
-          </button>
-          <button onClick={handleToggleWordWrap} className="text-white text-sm">
-            Wrap
-          </button>
-          <button onClick={handleRefresh} className="text-white text-sm">
-            Reset
-          </button>
-        </div>
-      )}
+     
       {/* Share Dialog */}
       {isShareDialogOpen && (
         <ShareSnippetDialog
@@ -282,3 +267,4 @@ function EditorPanel() {
 }
 
 export default EditorPanel;
+

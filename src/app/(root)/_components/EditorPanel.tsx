@@ -64,7 +64,7 @@ function EditorPanel() {
     localStorage.setItem('editor-font-size', size.toString());
   };
 
-  // Robust select all: always directly select all text
+  // Robust select all
   const handleSelectAll = () => {
     const ed = editor || (window as any).monacoEditor;
     if (!ed) {
@@ -74,7 +74,6 @@ function EditorPanel() {
     const model = ed.getModel();
     if (!model) return;
     try {
-      // Always use robust fallback
       const endLine = model.getLineCount();
       const endCol = model.getLineMaxColumn(endLine);
       ed.setSelection({
@@ -86,23 +85,6 @@ function EditorPanel() {
       ed.focus();
     } catch (err) {
       console.warn('SelectAll fallback failed', err);
-    }
-  };
-
-  // Format code (unchanged)
-  const handleFormatCode = async () => {
-    const ed = editor || (window as any).monacoEditor;
-    if (ed) {
-      await ed.getAction('editor.action.formatDocument')?.run();
-    }
-  };
-
-  // Word wrap toggle (unchanged handler - used in mobile only)
-  const handleToggleWordWrap = () => {
-    const ed = editor || (window as any).monacoEditor;
-    if (ed) {
-      const current = ed.getRawOptions().wordWrap;
-      ed.updateOptions({ wordWrap: current === 'on' ? 'off' : 'on' });
     }
   };
 
@@ -195,15 +177,7 @@ function EditorPanel() {
                   contextMenuOrder: 1.5,
                   run: () => handleSelectAll(),
                 });
-                // DO NOT add toggle-word-wrap
-                // Add Format only
-                editor.addAction({
-                  id: 'format-document',
-                  label: 'Format Document',
-                  contextMenuGroupId: '1_modification',
-                  contextMenuOrder: 2,
-                  run: () => handleFormatCode(),
-                });
+                // Format Document and Word Wrap toggle removed from context menu
               }}
               options={{
                 minimap: { enabled: false },
@@ -250,8 +224,6 @@ function EditorPanel() {
           />
         </div>
       </div>
-      {/* Mobile Toolbar */}
-     
       {/* Share Dialog */}
       {isShareDialogOpen && (
         <ShareSnippetDialog
@@ -267,4 +239,3 @@ function EditorPanel() {
 }
 
 export default EditorPanel;
-

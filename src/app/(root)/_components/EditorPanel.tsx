@@ -16,6 +16,7 @@ function EditorPanel() {
   const clerk = useClerk();
   const router = useRouter();
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
   const {
     language,
@@ -29,6 +30,12 @@ function EditorPanel() {
   } = useCodeEditorStore();
 
   const mounted = useMounted();
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setIsMobile(/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent));
+    }
+  }, []);
 
   useEffect(() => {
     const savedCode = localStorage.getItem(`editor-code-${language}`);
@@ -57,13 +64,56 @@ function EditorPanel() {
     localStorage.setItem('editor-font-size', size.toString());
   };
 
+  // ✅ Fully working select all
+  const handleSelectAll = () => {
+    const ed = editor || (window as any).monacoEditor;
+    if (!ed) {
+      console.warn('[SelectAll] editor not ready yet');
+      return;
+    }
+
+    const model = ed.getModel();
+    if (!model) return;
+
+    try {
+      ed.trigger('keyboard', 'editor.action.selectAll', null);
+    } catch (err) {
+      console.warn('Built-in selectAll failed, using fallback', err);
+      const endLine = model.getLineCount();
+      const endCol = model.getLineMaxColumn(endLine);
+      ed.setSelection({
+        startLineNumber: 1,
+        startColumn: 1,
+        endLineNumber: endLine,
+        endColumn: endCol,
+      });
+    }
+
+    ed.focus();
+  };
+
+  const handleFormatCode = async () => {
+    const ed = editor || (window as any).monacoEditor;
+    if (ed) {
+      await ed.getAction('editor.action.formatDocument')?.run();
+    }
+  };
+
+  const handleToggleWordWrap = () => {
+    const ed = editor || (window as any).monacoEditor;
+    if (ed) {
+      const current = ed.getRawOptions().wordWrap;
+      ed.updateOptions({ wordWrap: current === 'on' ? 'off' : 'on' });
+    }
+  };
+
   if (!mounted) return null;
 
   return (
     <div className="relative">
       <div className="relative bg-[#12121a]/90 backdrop-blur rounded-xl border border-white/[0.05] p-6">
         {/* Header */}
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-4 flex-wrap gap-4">
           <div className="flex items-center gap-3">
             <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-[#1e1e2e] ring-1 ring-white/5">
               <Image
@@ -82,7 +132,7 @@ function EditorPanel() {
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center flex-wrap gap-3">
             {/* Font Size Slider */}
             <div className="flex items-center gap-3 px-3 py-2 bg-[#1e1e2e] rounded-lg ring-1 ring-white/5">
               <TypeIcon className="size-4 text-gray-400" />
@@ -137,7 +187,37 @@ function EditorPanel() {
               onChange={handleEditorChange}
               theme={theme}
               beforeMount={defineMonacoThemes}
-              onMount={(editor) => setEditor(editor)}
+              onMount={(editor, monaco) => {
+                // ✅ Store in both state and window
+                setEditor(editor);
+                (window as any).monacoEditor = editor;
+                console.log('[Monaco Mounted]', editor);
+
+                // === Custom Context Menu Actions ===
+                editor.addAction({
+                  id: 'select-all',
+                  label: 'Select All',
+                  contextMenuGroupId: 'navigation',
+                  contextMenuOrder: 1.5,
+                  run: () => handleSelectAll(),
+                });
+
+                editor.addAction({
+                  id: 'format-document',
+                  label: 'Format Document',
+                  contextMenuGroupId: '1_modification',
+                  contextMenuOrder: 2,
+                  run: () => handleFormatCode(),
+                });
+
+                editor.addAction({
+                  id: 'toggle-word-wrap',
+                  label: 'Toggle Word Wrap',
+                  contextMenuGroupId: '2_custom',
+                  contextMenuOrder: 1,
+                  run: () => handleToggleWordWrap(),
+                });
+              }}
               options={{
                 minimap: { enabled: false },
                 fontSize,
@@ -158,6 +238,7 @@ function EditorPanel() {
                   verticalScrollbarSize: 8,
                   horizontalScrollbarSize: 8,
                 },
+                wordWrap: 'on',
               }}
             />
           ) : (
@@ -183,6 +264,24 @@ function EditorPanel() {
           />
         </div>
       </div>
+
+      {/* Mobile Toolbar */}
+      {isMobile && (
+        <div className="fixed bottom-4 left-4 right-4 z-50 flex justify-around bg-[#1e1e2e] p-2 rounded-xl ring-1 ring-white/10 shadow-lg">
+          <button onClick={handleSelectAll} className="text-white text-sm">
+            Select All
+          </button>
+          <button onClick={handleFormatCode} className="text-white text-sm">
+            Format
+          </button>
+          <button onClick={handleToggleWordWrap} className="text-white text-sm">
+            Wrap
+          </button>
+          <button onClick={handleRefresh} className="text-white text-sm">
+            Reset
+          </button>
+        </div>
+      )}
 
       {/* Share Dialog */}
       {isShareDialogOpen && (
